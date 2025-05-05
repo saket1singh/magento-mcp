@@ -221,10 +221,6 @@ export async function searchProducts(filters: {
             }
           }
           stock_status
-          custom_attributes {
-            code
-            value
-          }
         }
       }
     }
@@ -267,22 +263,15 @@ export async function searchProducts(filters: {
     }
 
     // Transform the response to match our Product interface
-    const products = data.data.products.items.map((item: any) => {
-      const customAttributes = item.custom_attributes.reduce((acc: any, attr: any) => {
-        acc[attr.code] = attr.value;
-        return acc;
-      }, {});
-
-      return {
-        sku: item.sku,
-        name: item.name,
-        price: item.price,
-        stock_status: item.stock_status,
-        color: customAttributes.color,
-        size: customAttributes.size,
-        material: customAttributes.material
-      };
-    });
+    const products = data.data.products.items.map((item: any) => ({
+      sku: item.sku,
+      name: item.name,
+      price: item.price,
+      stock_status: item.stock_status,
+      color: undefined,
+      size: undefined,
+      material: undefined
+    }));
 
     console.log(`✅ Found ${products.length} matching products`);
     return products;
