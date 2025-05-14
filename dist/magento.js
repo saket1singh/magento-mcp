@@ -7,6 +7,7 @@ exports.getProductStock = getProductStock;
 exports.getLatestProducts = getLatestProducts;
 exports.searchProducts = searchProducts;
 exports.getProducts = getProducts;
+exports.getPendingOrders = getPendingOrders;
 const node_fetch_1 = __importDefault(require("node-fetch"));
 // Using Magento 2 demo store
 const MAGENTO_GRAPHQL_URL = 'https://venia.magento.com/graphql';
@@ -296,6 +297,72 @@ async function getProducts() {
     }
     catch (error) {
         console.error('❌ Error fetching products:', error);
+        throw error;
+    }
+}
+async function getPendingOrders() {
+    var _a, _b;
+    console.log('🔍 Fetching pending orders...');
+    const query = `
+    query {
+      orders(
+        filter: { status: { eq: "pending" } }
+        pageSize: 10
+        currentPage: 1
+      ) {
+        items {
+          order_number
+          status
+          created_at
+          total {
+            value
+            currency
+          }
+          customer {
+            firstname
+            lastname
+            email
+          }
+        }
+      }
+    }
+  `;
+    console.log('📡 Sending request to Magento...');
+    console.log('Query:', query);
+    try {
+        const response = await (0, node_fetch_1.default)(MAGENTO_GRAPHQL_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Store': 'default'
+            },
+            body: JSON.stringify({ query })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ API Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText
+            });
+            throw new Error(`Magento API error: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        console.log('📥 Raw API Response:', JSON.stringify(data, null, 2));
+        if (data.errors) {
+            console.error('❌ GraphQL Errors:', data.errors);
+            throw new Error(`GraphQL error: ${data.errors[0].message}`);
+        }
+        if (!((_b = (_a = data.data) === null || _a === void 0 ? void 0 : _a.orders) === null || _b === void 0 ? void 0 : _b.items)) {
+            console.error('❌ No orders found in response');
+            return [];
+        }
+        const orders = data.data.orders.items;
+        console.log(`✅ Found ${orders.length} pending orders`);
+        return orders;
+    }
+    catch (error) {
+        console.error('❌ Error fetching pending orders:', error);
         throw error;
     }
 }

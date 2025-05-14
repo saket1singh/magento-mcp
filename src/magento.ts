@@ -361,3 +361,91 @@ export async function getProducts(): Promise<Product[]> {
         throw error;
     }
 }
+
+export interface Order {
+  order_number: string;
+  status: string;
+  created_at: string;
+  total: {
+    value: number;
+    currency: string;
+  };
+  customer: {
+    firstname: string;
+    lastname: string;
+    email: string;
+  };
+}
+
+export async function getPendingOrders(): Promise<Order[]> {
+  console.log('🔍 Fetching pending orders...');
+  
+  const query = `
+    query {
+      orders(
+        filter: { status: { eq: "pending" } }
+        pageSize: 10
+        currentPage: 1
+      ) {
+        items {
+          order_number
+          status
+          created_at
+          total {
+            value
+            currency
+          }
+          customer {
+            firstname
+            lastname
+            email
+          }
+        }
+      }
+    }
+  `;
+
+  console.log('📡 Sending request to Magento...');
+  console.log('Query:', query);
+
+  try {
+    const response = await fetch(MAGENTO_GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Store': 'default'
+      },
+      body: JSON.stringify({ query })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Magento API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('📥 Raw API Response:', JSON.stringify(data, null, 2));
+
+    if (data.errors) {
+      console.error('❌ GraphQL Errors:', data.errors);
+      throw new Error(`GraphQL error: ${data.errors[0].message}`);
+    }
+
+    if (!data.data?.orders?.items) {
+      console.error('❌ No orders found in response');
+      return [];
+    }
+
+    const orders = data.data.orders.items;
+    console.log(`✅ Found ${orders.length} pending orders`);
+    return orders;
+  } catch (error) {
+    console.error('❌ Error fetching pending orders:', error);
+    throw error;
+  }
+}
