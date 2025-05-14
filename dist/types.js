@@ -50,9 +50,11 @@ class Agent {
         }
     }
     extractSku(message) {
-        // Extract SKU from message - can be enhanced
-        const skuMatch = message.match(/\b(24-[A-Z0-9]{2,4})\b/i);
-        return skuMatch ? skuMatch[1] : '';
+        // Extract SKU from message - now matches alphanumeric SKUs like VA01, 24-XXXX, etc.
+        //  const skuMatch = message.match(/\b([A-Z0-9\-]+)\b/i);
+        //  return skuMatch ? skuMatch[1] : '';
+        const match = message.match(/\b(?:sku:|for|of)\s*([A-Z0-9\-]+)/i);
+        return match ? match[1].toUpperCase() : '';
     }
     extractSearchParameters(message) {
         const parameters = {};
